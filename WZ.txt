@@ -1,0 +1,273 @@
+Sub PDF_To_Excel()
+
+Dim wzSheet As Worksheet
+Set wzSheet = ThisWorkbook.Sheets("WZ-aut")
+
+Dim SuppliersSheet As Worksheet
+Set SuppliersSheet = ThisWorkbook.Sheets("Suppliers")
+
+Dim pdf_path, WZ_pdf_path, strFolderExists, pickedFile, kodTowaru(9), kodDostawca, kodPojedynczyTowar, firstParagraph, numerZamowienia As String
+Dim wordData, doc, tempData, wordApp As Object
+Dim i, j, tableIndex, maxCellIndex, SuppliersRow As Integer
+pdf_path = filesLocations.getPoLocation() & year(Date) & "\" & Format(CStr(month(Date)), "00") & ") " & MonthName(month(Date)) & "\"
+WZ_pdf_path = filesLocations.getWzLocation() & year(Date) & "\" & Format(CStr(month(Date)), "00") & ") " & MonthName(month(Date)) & "\"
+
+'wczytywanie pliku - okno dialogowe
+Dim fd As Office.FileDialog
+Dim strFile As String
+Set fd = Application.FileDialog(msoFileDialogFilePicker)
+
+With fd
+    .Filters.Clear
+    .Filters.add "Wska¿ plik pdf", "*.pdf", 1
+    .Title = "Wska¿ plik pdf do wygenerowania WZ"
+    .AllowMultiSelect = False
+    .InitialFileName = pdf_path
+ 
+    If .Show = True Then strFile = .SelectedItems(1)
+ 
+End With
+If strFile = "" Then Exit Sub
+'koniec czytywania pliku
+
+Set wordApp = CreateObject("word.application")
+wordApp.Visible = True 'ukryta aplikacja Word
+
+Set doc = wordApp.Documents.Open(strFile, False, Format:="PDF Files") 'otwieranie pliku w Word
+
+pickedFile = Split(strFile, "\")
+pickedFile = pickedFile(UBound(pickedFile))
+pickedFile = Mid(pickedFile, 16, 16)
+numerZamowienia = Replace(pickedFile, "-", "/")
+
+
+For i = 1 To doc.Tables.Count
+'sprawdzam czy plik jest prawidlowy
+    If InStr(doc.Tables(i), "Z A M Ó W I E N I E") = 0 Then
+        MsgBox pickedFile(UBound(pickedFile)) & "- To nie jest pdf z zamówieniem!", vbCritical
+        doc.Close True
+        wordApp.Quit
+        Exit Sub
+    End If
+'sprawdzam w jakiej tabeli jest "watosc netto", dzieki temu wiem od jakiego indexu budowac tablice zamowienia
+    If InStr(doc.Tables(i), "Wartoœæ netto") Then
+        tableIndex = i
+        Exit For
+    End If
+Next i
+
+Set wordData = doc.Tables(tableIndex)
+tempWordData = Split(doc.Tables(tableIndex), "") 'dziele tabele na wiersze i przypisuje do tablicy
+
+Dim WordDataArray(80) As String ' pomocnicza tablica z danymi zamowienia
+'szukam kodu dostawcy
+For i = 0 To UBound(tempWordData)
+tempWord = Application.WorksheetFunction.Clean(tempWordData(i))
+    If tempWord = "Dostawca :" Then
+        kodDostawca = WhiteSpace.RemoveWhiteSpace(CStr(tempWordData(i + 1)))
+        Exit For
+    End If
+Next i
+
+j = 0
+DataIndex = 0
+DataLastIndex = 0
+'generowanie tablicy wlasciwej z produktami zamowionymi
+For i = 0 To UBound(tempWordData)
+    tempWord = Application.WorksheetFunction.Clean(tempWordData(i))
+    j = i + 2
+    DataLastIndex = j + 78
+    
+    If tempWord = "Wartoœæ netto" Then
+        
+        For k = j To DataLastIndex Step 1
+            WordDataArray(DataIndex) = Application.WorksheetFunction.Clean(tempWordData(k))
+            DataIndex = DataIndex + 1
+            j = j + 1
+        Next
+        Exit For
+        
+    End If
+    
+Next i
+
+doc.Close True
+wordApp.Quit
+
+wzSheet.Range("A12:A21").ClearContents
+wzSheet.Range("D12:D21").ClearContents
+
+'uzupelnianie Wz-aut
+j = 12
+For i = 1 To 80 Step 8
+    
+    wzSheet.Cells(j, 1).Value = WordDataArray(i)
+    wzSheet.Cells(j, 4).Value = WordDataArray(i + 3)
+    j = j + 1
+    
+Next i
+wzSheet.Cells(8, 13).Value = numerZamowienia
+SuppliersRow = Application.Match(kodDostawca, SuppliersSheet.Range("C:C"), 0)
+wzSheet.Cells(3, 6).Value = SuppliersSheet.Cells(SuppliersRow, 2)
+wzSheet.Cells(9, 13).Value = CStr(Mid(wzFunctions.setNextWzFile(), 8, 10))
+MsgBox "Wczytano zamówienie " & numerZamowienia
+
+End Sub
+
+
+Private Sub addPalette1000x2000_Click()
+    dodajPalete ("Paleta 1000x2000")
+End Sub
+
+Private Sub addPalette1250x2500_Click()
+    dodajPalete ("Paleta 1250x2500")
+End Sub
+
+Private Sub addPalette1500x3000_Click()
+    dodajPalete ("Paleta 1500x3000")
+End Sub
+
+Private Sub addPaletteEuro_Click()
+    dodajPalete ("Paleta 800x1200")
+End Sub
+
+Private Sub openPoFileFromWz_Click()
+Dim Po_pdf_path As String
+Dim PoNumberFromWZ As String
+Dim PoNumberFromWZPath As String
+PoNumberFromWZ = ThisWorkbook.Sheets("WZ-aut").Cells(8, 13).Value
+SplitPoNumberFromWZ = Split(PoNumberFromWZ, "/")
+Po_pdf_path = filesLocations.getPoLocation() & "20" & SplitPoNumberFromWZ(3) & "\" & SplitPoNumberFromWZ(2) & ") " & MonthName(SplitPoNumberFromWZ(2)) & "\"
+PoNumberFromWZPath = Po_pdf_path & "Purchase Order " & Replace(PoNumberFromWZ, "/", "-") & ".PDF"
+Call Shell("explorer.exe " & PoNumberFromWZPath, vbNormalFocus)
+
+End Sub
+
+Private Sub getWzNumber_Click()
+ThisWorkbook.Sheets("WZ-aut").Cells(9, 13).Value = CStr(Mid(wzFunctions.setNextWzFile(), 8, 10))
+
+End Sub
+
+Private Sub openPoDirectory_Click()
+Dim Po_pdf_path As String
+Po_pdf_path = filesLocations.getPoLocation() & year(Date) & "\" & Format(CStr(month(Date)), "00") & ") " & MonthName(month(Date)) & "\"
+Call Shell("explorer.exe " & Po_pdf_path, vbNormalFocus)
+End Sub
+
+Private Sub OpenWzDirectory_Click()
+Dim WZ_pdf_path As String
+WZ_pdf_path = filesLocations.getWzLocation() & year(Date) & "\" & Format(CStr(month(Date)), "00") & ") " & MonthName(month(Date)) & "\"
+Call Shell("explorer.exe " & WZ_pdf_path, vbNormalFocus)
+End Sub
+
+Private Sub SavePrintWz_Click()
+Dim WzNumber As Variant
+WzNumber = Split(Left(wzFunctions.setNextWzFile(), 17), "-")
+
+'Pytanie czy zast¹piæ plik
+Dim WZNumberFromWorksheet As String
+Dim WZNumberFromFiles As String
+WZNumberFromWorksheet = ThisWorkbook.Sheets("WZ-aut").Cells(9, 13).Value
+WZNumberFromFiles = WzNumber(2) & "-" & WzNumber(3) & "-" & WzNumber(4)
+
+wzFunctions.arrIsEmpty (WzNumber)
+
+    If WZNumberFromWorksheet <> WZNumberFromFiles Then
+        MsgBox "Numer WZ (" + WZNumberFromWorksheet + ") oraz Numer pliku (" + WZNumberFromFiles + ") nie zgadzaj¹ siê proszê poprawiæ dane"
+        Exit Sub
+    End If
+
+'Create and assign variables
+Dim saveLocation As String
+saveLocation = filesLocations.getWzLocation() & WzNumber(4) & "\" & Format(WzNumber(3), "00") & ") " & MonthName(WzNumber(3)) & "\" & wzFunctions.setNextWzFile()
+
+'Save Active Sheet(s) as PDF
+ActiveSheet.ExportAsFixedFormat Type:=xlTypePDF, _
+    fileName:=saveLocation
+    
+'Save Active Woorkbook
+ThisWorkbook.Save
+
+'Print Active Sheet
+ActiveSheet.PrintOut
+
+'Dodaj do bazy
+'Call WZ_to_baza
+
+ThisWorkbook.Sheets("WZ-aut").Cells(19, 18) = "tak"
+    
+End Sub
+
+Private Sub wczytajPO_Click()
+PDF_To_Excel
+End Sub
+
+Sub dodajPalete(wymiarPalety As String)
+
+Dim wzSheet As Worksheet
+Set wzSheet = ThisWorkbook.Sheets("WZ-aut")
+For i = 13 To 21
+    If wzSheet.Cells(i, 1).Value = "" Then
+        wzSheet.Cells(i, 1).Value = wymiarPalety
+        Exit Sub
+        Exit For
+    End If
+Next
+MsgBox ("Brak miejsca na dodanie palety")
+End Sub
+
+Sub WZ_to_baza()
+
+Dim wzSheet As Worksheet
+Set wzSheet = ThisWorkbook.Sheets("WZ-aut")
+Dim WzOdbiorca, WzDataWysylki, WzDataOtrzymania, WzDostarczyl, WzNrZamowienia, WzNr As String
+Dim c As Integer
+Dim WzData As Variant
+WzData = wzSheet.Range("a12:f21")
+
+Dim searchedWzNumber As String
+searchedWzNumber = "09.09.202"
+
+
+Dim xlApp As New Excel.Application
+Set wb = xlApp.Workbooks.Open("D:\wlasciwy-adres")
+
+LastRow = wb.Worksheets("WZ-baza").Cells(Rows.Count, 1).End(xlUp).Row
+
+Set FoundCell = wb.Worksheets("WZ-baza").Range("G:G").Find(What:=searchedWzNumber)
+            If Not FoundCell Is Nothing Then
+                MsgBox ("found in row: " & FoundCell.Row)
+            Else
+                MsgBox (" not found")
+            End If
+
+wb.Save
+wb.Close
+
+
+For i = 1 To 10
+    If IsEmpty(WzData(i, 1)) Then
+    Exit For
+    Else
+        wb.Worksheets("WZ-baza").Cells(LastRow + i, 1) = wzSheet.Cells(11 + i, 1).Value 'Kod towaru
+        wb.Worksheets("WZ-baza").Cells(LastRow + i, 2) = wzSheet.Cells(11 + i, 2).Value 'Opis
+        wb.Worksheets("WZ-baza").Cells(LastRow + i, 3) = wzSheet.Cells(11 + i, 4).Value 'Zdysponowano
+        wb.Worksheets("WZ-baza").Cells(LastRow + i, 4) = wzSheet.Cells(11 + i, 5).Value 'JM
+        wb.Worksheets("WZ-baza").Cells(LastRow + i, 5) = wzSheet.Cells(7, 9).Value 'Data
+        wb.Worksheets("WZ-baza").Cells(LastRow + i, 6) = wzSheet.Cells(3, 6).Value 'Odbiorca
+        wb.Worksheets("WZ-baza").Cells(LastRow + i, 7) = wzSheet.Cells(5, 8).Value 'Nr biezacy
+        wb.Worksheets("WZ-baza").Cells(LastRow + i, 8) = wzSheet.Cells(9, 2).Value 'Nr zamówienia
+        wb.Worksheets("WZ-baza").Cells(LastRow + i, 9) = wzSheet.Cells(24, 3).Value 'Dostarczy³
+        
+    End If
+Next i
+
+
+
+
+wb.Save
+wb.Close
+Set wb = Nothing
+Set xlApp = Nothing
+
+End Sub

@@ -1,0 +1,35 @@
+Private Sub Worksheet_SelectionChange(ByVal Target As Range)
+
+Dim answer, answerEraseWZ As Integer
+Dim addedDate As Date
+
+If Target.Count = 1 Then
+
+    If Target.Column = 2 And Target.Row > 7 Then
+        
+        addedDate = ThisWorkbook.Sheets("WZ-aut").Cells(20, 18).Value
+        If DateDiff("n", addedDate, Now) > 10 Or ThisWorkbook.Sheets("WZ-aut").Cells(19, 18) = "tak" Then
+            answerEraseWZ = MsgBox("Czy skasowaæ dane w WZ", vbYesNo + vbCritical, "Czy skasowaæ istniej¹ce dane w WZ?")
+                If answerEraseWZ = vbYes Then
+                ThisWorkbook.Sheets("WZ-aut").Range("A12:A21").ClearContents
+                ThisWorkbook.Sheets("WZ-aut").Cells(19, 18) = "nie"
+                End If
+        End If
+        answer = MsgBox(CStr(Cells(Target.Row, 4)), vbYesNo, "Do WZ bêdzie wstawione")
+        
+        If answer = vbYes Then
+            Call InsertToPO_WZ.insertData("WZ", CStr(Cells(Target.Row, 4)))
+            ThisWorkbook.Sheets("WZ-aut").Cells(20, 18) = Now
+        End If
+        
+    ElseIf Target.Column = 3 And Target.Row > 7 Then
+        answer = MsgBox(CStr(Cells(Target.Row, 4)), vbYesNo, "Do Purchase Order bêdzie wstawione")
+        If answer = vbYes Then Call InsertToPO_WZ.insertData("PO", CStr(Cells(Target.Row, 4)))
+    
+    End If
+
+End If
+
+End Sub
+
+

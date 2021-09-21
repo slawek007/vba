@@ -1,0 +1,96 @@
+Function getLatestPoFile() As String
+
+Dim MyPath As String
+Dim MyFile As String
+Dim LastFileName As String
+Dim LatestDate As Date
+Dim LastFileNumber As Integer
+
+    MyPath = filesLocations.getPoLocation() & year(Date) & "\" & Format(CStr(month(Date)), "00") & ") " & MonthName(month(Date)) & "\"
+
+    If Right(MyPath, 1) <> "\" Then MyPath = MyPath & "\"
+    MyFile = Dir(MyPath & "*.pdf", vbNormal)
+    
+    If Len(MyFile) = 0 Then
+        getLatestPoFile = False
+        Exit Function
+
+    End If
+
+    Do While Len(MyFile) > 0
+        
+        If Len(MyFile) > 33 And Len(MyFile) < 36 Then LFN = CInt(Mid(MyFile, 20, 3))
+        
+        If Mid(MyFile, 1, 18) = "Purchase Order PPL" Then
+            
+            If LFN > LastFileNumber Then
+                LastFileNumber = CInt(Mid(MyFile, 20, 3))
+                LastFileName = MyFile
+            End If
+            
+        End If
+
+        MyFile = Dir
+        
+    Loop
+
+getLatestPoFile = LastFileName
+
+End Function
+
+
+Public Function getLatestPoFileDate() As Date
+
+    Dim MyPath As String
+    MyPath = filesLocations.getPoLocation() & year(Date) & "\" & Format(CStr(month(Date)), "00") & ") " & MonthName(month(Date)) & "\"
+    getLatestPoFileDate = FileDateTime(MyPath & getLatestPoFile())
+
+End Function
+
+Function checkYearMonthDirectory(year As String, month As String) As Boolean
+
+If Dir(filesLocations.getPoLocation() & "20" & year, vbDirectory) = "" Then
+    MkDir filesLocations.getPoLocation() & "20" & year
+    MsgBox "Utworzono katalog z nowym rokiem 20" & year
+End If
+    
+If Dir(filesLocations.getPoLocation() & "20" & year & "\" & Format(month, "00") & ") " & MonthName(month) & "\", vbDirectory) = "" Then
+    MkDir filesLocations.getPoLocation() & "20" & year & "\" & Format(month, "00") & ") " & MonthName(month)
+End If
+
+If Dir(filesLocations.getPoLocation() & "20" & year & "\" & Format(month, "00") & ") " & MonthName(month) & "\", vbDirectory) <> "" Then checkYearMonthDirectory = True
+
+End Function
+
+
+Function getNextPoFile() As String
+
+
+Dim previousPoFile As String
+previousPoFile = PoFunctions.getLatestPoFile()
+splitPreviousPoFile = Split(previousPoFile, "-")
+
+If (previousPoFile = "False") Then
+createNewYearMonth = PoFunctions.checkYearMonthDirectory(Right(Format(year(Date), "00"), 2), Format(month(Date), "00"))
+
+    If (createNewYearMonth = True) Then
+        exportPoAttachments.ExportEmailsfromSpecificSender
+        previousPoFile = PoFunctions.getLatestPoFile()
+        splitPreviousPoFile = Split(previousPoFile, "-")
+    End If
+    
+End If
+
+    If splitPreviousPoFile(2) = Format(month(Date), "00") Then
+        splitPreviousPoFile(1) = CStr(Format(CInt(splitPreviousPoFile(1)) + 1, "000"))
+    Else
+    splitPreviousPoFile(1) = "001"
+    splitPreviousPoFile(2) = Format(month(Date), "00")
+    splitPreviousPoFile(3) = Right(Format(year(Date), "00"), 2)
+    End If
+        
+
+
+getNextPoFile = splitPreviousPoFile(0) & "-" & splitPreviousPoFile(1) & "-" & splitPreviousPoFile(2) & "-" & splitPreviousPoFile(3) & "-" & splitPreviousPoFile(4)
+
+End Function

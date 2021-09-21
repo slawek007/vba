@@ -1,0 +1,52 @@
+
+Sub nextKPWNumber()
+
+Dim NextNumber As String
+NextNumber = Replace(Left(KPW_Functions.setNextKPWFile(), 13), "-", "/")
+
+If (Application.ActiveWorkbook.Sheets(1).Range("C1").Value <> "BOM KPW") Then
+    MsgBox "Niestety to nie jest prawid³owy plik KPW", vbCritical
+    Exit Sub
+Else
+    Application.ActiveWorkbook.Sheets(1).Range("J4").Value = NextNumber
+End If
+
+End Sub
+
+
+Sub PrintKPW()
+
+Dim NextNumber As String
+NextNumber = Replace(Left(KPW_Functions.setNextKPWFile(), 13), "-", "/")
+
+If (Application.ActiveWorkbook.Sheets(1).Range("C1").Value <> "BOM KPW") Then
+    MsgBox "Niestety to nie jest prawid³owy plik KPW", vbCritical
+    Exit Sub
+Else
+    Application.ActiveWorkbook.Sheets(1).Range("J4").Value = NextNumber
+    
+    'Create and assign variables
+    Dim saveLocation As String
+    saveLocation = PersonalFilesLocation.getKPWLocation() & Year(Date) & "\" & Format(CStr(Month(Date)), "00") & ") " & MonthName(Month(Date)) & "\" & KPW_Functions.setNextKPWFile()
+
+        
+    'Save Active Woorkbook
+    ActiveWorkbook.Save
+
+    
+    'Print Active Woorkbook
+    Const laserPrinter As String = "HP LaserJet 1020"
+    Const pdfPrinter As String = "PDFCreator"
+
+
+    ActiveWorkbook.PrintOut Preview:=False, ActivePrinter:=laserPrinter, PrintToFile:=True, PrToFileName:=PSFileName
+    ActiveWorkbook.PrintOut Preview:=False, ActivePrinter:=pdfPrinter, PrintToFile:=True, PrToFileName:=PSFileName
+    
+    
+    ActiveSheet.ExportAsFixedFormat Type:=xlTypePDF, _
+    Filename:=saveLocation
+    
+    
+End If
+
+End Sub

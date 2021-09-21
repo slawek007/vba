@@ -1,0 +1,37 @@
+
+Sub insertData(ByVal insertType As String, ByVal insertText As String)
+
+Dim wb As Workbook: Set wb = ThisWorkbook
+Dim wsWZ As Worksheet: Set wsWZ = wb.Sheets("WZ-aut")
+Dim wsPO As Worksheet: Set wsPO = wb.Sheets("Purchase Order")
+
+If (wsWZ Is Nothing) Or (wsPO Is Nothing) Then
+    MsgBox "Brak Zak³adki Purchase Order lub WZ-aut"
+    Exit Sub
+End If
+
+Select Case insertType
+    Case "PO"
+        For i = 24 To 33
+            If wsPO.Cells(i, 3).Value = 0 Then
+                wsPO.Cells(i, 3) = insertText
+                Exit For
+            ElseIf (wsPO.Cells(i, 3).Value <> 0) And i = 33 Then
+                MsgBox "Brak wolnego pola w formularzu zamówieñ", vbCritical
+            End If
+        Next
+        
+    Case "WZ"
+        
+        For i = 12 To 21
+            If wsWZ.Cells(i, 1).Value = 0 Then
+                wsWZ.Cells(i, 1) = insertText
+                Exit For
+            ElseIf (wsWZ.Cells(i, 1).Value <> 0) And i = 21 Then
+                MsgBox "Brak wolnego pola w formularzu WZ", vbCritical
+            End If
+        Next
+        
+End Select
+
+End Sub

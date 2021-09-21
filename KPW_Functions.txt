@@ -1,0 +1,120 @@
+
+Sub openKPWDirectory_Click()
+
+Dim KPW_pdf_path As String
+KPW_pdf_path = PersonalFilesLocation.getKPWLocation() & Year(Date) & "\" & Format(CStr(Month(Date)), "00") & ") " & MonthName(Month(Date)) & "\"
+
+If Dir(KPW_pdf_path) = "" Then
+    KPW_pdf_path_year = "D:\xxxx\produkcja\zlecenia\" & Year(Date) & "\"
+    Call Shell("explorer.exe " & KPW_pdf_path_year, vbNormalFocus)
+Else
+    Call Shell("explorer.exe " & KPW_pdf_path, vbNormalFocus)
+End If
+    
+End Sub
+
+
+
+Public Function getLatestKPWFile() As String
+
+Dim MyPath As String
+Dim MyFile As String
+Dim LatestFile As String
+Dim LatestDate As Date
+Dim LMD As Date
+
+    MyPath = PersonalFilesLocation.getKPWLocation() & Year(Date) & "\" & Format(CStr(Month(Date)), "00") & ") " & MonthName(Month(Date)) & "\"
+
+    If Right(MyPath, 1) <> "\" Then MyPath = MyPath & "\"
+    MyFile = Dir(MyPath & "*.pdf", vbNormal)
+    
+    If Len(MyFile) = 0 Then
+        getLatestKPWFile = ""
+        Exit Function
+
+    End If
+
+    Do While Len(MyFile) > 0
+
+        LMD = FileDateTime(MyPath & MyFile)
+
+        If LMD > LatestDate Then
+            LatestFile = MyFile
+            LatestDate = LMD
+        End If
+
+        MyFile = Dir
+    Loop
+
+getLatestKPWFile = LatestFile
+
+End Function
+
+Public Function setNextKPWFile() As String
+
+
+If (Application.ActiveWorkbook.Sheets(1).Range("C1").Value <> "BOM KPW") Then
+    MsgBox "Niestety to nie jest prawid³owy plik KPW", vbCritical
+    Exit Function
+End If
+
+Dim productNumber As String
+productNumber = Application.ActiveWorkbook.Sheets(1).Range("E4").Value
+
+
+If Dir(PersonalFilesLocation.getKPWLocation(), vbDirectory) = "" Then
+
+    MsgBox "Mam problem ze struktur¹ katalogów." & vbCrLf & "Upewnij siê czy struktura katalogów wygl¹da nastêpuj¹co" & vbCrLf & PersonalFilesLocation.getKPWLocation(), vbCritical
+    Exit Function
+    
+End If
+
+'sprawdzam czy istnieje katalog z bie¿¹cym rokiem, jeœli nie tworzê go
+If Dir(PersonalFilesLocation.getKPWLocation() & Year(Date), vbDirectory) = "" Then
+
+    MkDir PersonalFilesLocation.getKPWLocation() & Year(Date)
+    MkDir PersonalFilesLocation.getKPWLocation() & Year(Date) & "\" & Format(CStr(Month(Date)), "00") & ") " & MonthName(Month(Date))
+    MsgBox "Utworzono katalog z nowym rokiem " & Year(Date)
+    setNextKPWFile = "001-" & Format(CStr(Month(Date)), "00") & "-" & Right(Year(Date), 2) & "-KPW-" & productNumber & ".pdf"
+    Exit Function
+    
+End If
+'sprawdzam czy istnieje katalog z bie¿¹cym miesi¹cem, jeœli nie tworzê go
+If Dir(PersonalFilesLocation.getKPWLocation() & Year(Date) & "\" & Format(CStr(Month(Date)), "00") & ") " & MonthName(Month(Date)), vbDirectory) = "" Then
+    
+    MkDir PersonalFilesLocation.getKPWLocation() & Year(Date) & "\" & Format(CStr(Month(Date)), "00") & ") " & MonthName(Month(Date))
+    MsgBox "Utworzono katalog z nowym miesi¹cem " & Format(CStr(Month(Date)), "00") & ") " & MonthName(Month(Date))
+    setNextKPWFile = "001-" & Format(CStr(Month(Date)), "00") & "-" & Right(Year(Date), 2) & "-KPW-" & productNumber & ".pdf"
+    Exit Function
+    
+End If
+
+'je¿eli istnieje katalog z bie¿¹cym miesi¹cem
+If Dir(PersonalFilesLocation.getKPWLocation() & Year(Date) & "\" & Format(CStr(Month(Date)), "00") & ") " & MonthName(Month(Date)), vbDirectory) <> "" Then
+
+    'sprawdzam czy w katalogu s¹ pliki .pdf, je¿eli nie tworzê plik zaczynaj¹c odlczanie od 1
+        If KPW_Functions.getLatestKPWFile() = "" Then
+            setNextKPWFile = "001-" & Format(CStr(Month(Date)), "00") & "-" & Right(Year(Date), 2) & "-KPW-" & productNumber & ".pdf"
+            Exit Function
+        Else
+        
+    'tablica przechowuj¹ca parametry ostatniego KPW
+    
+    
+    
+            LastKPWNumber = Split(KPW_Functions.getLatestKPWFile(), "-")
+        
+        'sprawwdzam czy wczytany plik to napewno KPW i generujê kolejny numer
+            If LastKPWNumber(3) = "KPW" Then
+                setNextKPWFile = Format(LastKPWNumber(0) + 1, "000") & "-" & Format(CStr(Month(Date)), "00") & "-" & Right(Year(Date), 2) & "-KPW-" & productNumber & ".pdf"
+            End If
+        End If
+Else
+    MsgBox "Mam problem ze struktur¹ katalogów." & vbCrLf & "Upewnij siê czy struktura katalogów wygl¹da nastêpuj¹co" & vbCrLf & PersonalFilesLocation.getKPWLocation(), vbCritical
+    Exit Function
+End If
+
+
+
+End Function
+

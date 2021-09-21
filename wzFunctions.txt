@@ -1,0 +1,103 @@
+Public Function getLatestWzFile() As String
+
+Dim MyPath As String
+Dim MyFile As String
+Dim LatestFile As String
+Dim LatestDate As Date
+Dim LMD As Date
+
+    MyPath = filesLocations.getWzLocation() & year(Date) & "\" & Format(CStr(month(Date)), "00") & ") " & MonthName(month(Date)) & "\"
+
+    If Right(MyPath, 1) <> "\" Then MyPath = MyPath & "\"
+    MyFile = Dir(MyPath & "*.pdf", vbNormal)
+    
+    If Len(MyFile) = 0 Then
+        getLatestWZ = False
+        Exit Function
+
+    End If
+
+    Do While Len(MyFile) > 0
+
+        LMD = FileDateTime(MyPath & MyFile)
+
+        If LMD > LatestDate Then
+            LatestFile = MyFile
+            LatestDate = LMD
+        End If
+
+        MyFile = Dir
+    Loop
+
+getLatestWzFile = LatestFile
+
+End Function
+
+Public Function setNextWzFile() As String
+
+If Dir(filesLocations.getWzLocation(), vbDirectory) = "" Then
+
+    MsgBox "Mam problem ze struktur¹ katalogów." & vbCrLf & "Upewnij siê czy struktura katalogów wygl¹da nastêpuj¹co" & vbCrLf & filesLocations.getWzLocation(), vbCritical
+    Exit Function
+    
+End If
+
+'sprawdzam czy istnieje katalog z bie¿¹cym rokiem, jeœli nie tworzê go
+If Dir(filesLocations.getWzLocation() & year(Date), vbDirectory) = "" Then
+
+    MkDir filesLocations.getWzLocation() & year(Date)
+    MkDir filesLocations.getWzLocation() & year(Date) & "\" & Format(CStr(month(Date)), "00") & ") " & MonthName(month(Date))
+    MsgBox "Utworzono katalog z nowym rokiem " & year(Date)
+    setNextWzFile = "WZ-PPL-01-" & Format(CStr(month(Date)), "00") & "-" & year(Date) & ".pdf"
+    Exit Function
+    
+End If
+'sprawdzam czy istnieje katalog z bie¿¹cym miesi¹cem, jeœli nie tworzê go
+If Dir(filesLocations.getWzLocation() & year(Date) & "\" & Format(CStr(month(Date)), "00") & ") " & MonthName(month(Date)), vbDirectory) = "" Then
+    
+    MkDir filesLocations.getWzLocation() & year(Date) & "\" & Format(CStr(month(Date)), "00") & ") " & MonthName(month(Date))
+    MsgBox "Utworzono katalog z nowym miesi¹cem " & Format(CStr(month(Date)), "00") & ") " & MonthName(month(Date))
+    setNextWzFile = "WZ-PPL-01-" & Format(CStr(month(Date)), "00") & "-" & year(Date) & ".pdf"
+    Exit Function
+    
+End If
+
+'je¿eli istnieje katalog z bie¿¹cym miesi¹cem
+If Dir(filesLocations.getWzLocation() & year(Date) & "\" & Format(CStr(month(Date)), "00") & ") " & MonthName(month(Date)), vbDirectory) <> "" Then
+
+    'sprawdzam czy w katalogu s¹ pliki .pdf, je¿eli nie tworzê plik zaczynaj¹c odlczanie od 1
+        If wzFunctions.getLatestWzFile() = "" Then
+            setNextWzFile = "WZ-PPL-01-" & Format(CStr(month(Date)), "00") & "-" & year(Date) & ".pdf"
+            Exit Function
+        End If
+        
+    'tablica przechowuj¹ca parametry ostatniej WZ-tki
+        LastWzNumber = Split(Left(wzFunctions.getLatestWzFile(), 17), "-")
+    
+    'sprawwdzam czy wczytany plik to napewno WZ i generujê kolejny numer
+        If LastWzNumber(0) = "WZ" Then
+            setNextWzFile = "WZ-PPL-" & Format(LastWzNumber(2) + 1, "00") & "-" & Format(CStr(month(Date)), "00") & "-" & year(Date) & ".pdf"
+        End If
+        
+Else
+    MsgBox "Mam problem ze struktur¹ katalogów." & vbCrLf & "Upewnij siê czy struktura katalogów wygl¹da nastêpuj¹co" & vbCrLf & filesLocations.getWzLocation(), vbCritical
+    Exit Function
+End If
+
+
+
+End Function
+
+Function arrIsEmpty(arr As Variant)
+    On Error Resume Next
+    arrIsEmpty = False
+    arrIsEmpty = UBound(arr)
+    
+        If arrIsEmpty < 0 Then
+         arrIsEmpty = True
+        Else
+         arrIsEmpty = False
+        End If
+        
+End Function
+

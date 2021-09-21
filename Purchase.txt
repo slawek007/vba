@@ -1,0 +1,96 @@
+Private Sub getNextPoNumber_Click()
+
+
+NextPoFile = PoFunctions.getNextPoFile
+NextPoNumber = Split(NextPoFile, "-")
+exportPoAttachments.ExportEmailsfromSpecificSender
+NextPoFile = PoFunctions.getNextPoFile
+NextPoNumber = Split(NextPoFile, "-")
+
+ThisWorkbook.Sheets("Purchase Order").Cells(12, 3).Value = "PPL / " & NextPoNumber(1) & " / " & NextPoNumber(2) & " / " & NextPoNumber(3) & " / PO "
+
+End Sub
+
+Private Sub openPoDirectory_Click()
+Dim Po_pdf_path As String
+Po_pdf_path = filesLocations.getPoLocation() & year(Date) & "\" & Format(CStr(month(Date)), "00") & ") " & MonthName(month(Date)) & "\"
+Call Shell("explorer.exe " & Po_pdf_path, vbNormalFocus)
+End Sub
+
+Private Sub SaveAndPrintPo_Click()
+
+Dim WzNumber As Variant
+Dim kodDostawca As String
+Dim emailDostawca As String
+PoNumber = Split(PoFunctions.getNextPoFile(), "-")
+PoOnlyNumber = Replace(Mid(PoFunctions.getNextPoFile(), 16, 16), "-", "/")
+
+kodDostawca = ThisWorkbook.Sheets("Purchase Order").Cells(14, 8).Value
+
+Dim SuppliersSheet As Worksheet
+Set SuppliersSheet = ThisWorkbook.Sheets("Suppliers")
+
+SuppliersRow = Application.Match(kodDostawca, SuppliersSheet.Range("C:C"), 0)
+emailDostawca = SuppliersSheet.Cells(SuppliersRow, 15)
+
+'Create and assign variables
+Dim saveLocation As String
+saveLocation = filesLocations.getPoLocation() & "20" & PoNumber(3) & "\" & Format(PoNumber(2), "00") & ") " & MonthName(PoNumber(2)) & "\" & PoFunctions.getNextPoFile()
+
+
+
+'Save Active Sheet(s) as PDF
+ActiveSheet.ExportAsFixedFormat Type:=xlTypePDF, _
+    fileName:=saveLocation
+    
+'Save Active Woorkbook
+ThisWorkbook.Save
+
+'Print Active Sheet
+ActiveSheet.PrintOut
+
+
+Dim xOutlookObj As Object
+Dim xEmailObj As Object
+Set xOutlookObj = CreateObject("Outlook.Application")
+Set xEmailObj = xOutlookObj.CreateItem(0)
+    With xEmailObj
+        .Display
+        .To = emailDostawca
+        .CC = "uzupelnic-mail"
+        .Subject = "Zamówienie nr " + PoOnlyNumber
+        .Attachments.add saveLocation
+        If DisplayEmail = False Then
+            '.Send
+        End If
+    End With
+
+
+
+End Sub
+
+Private Sub Worksheet_Change(ByVal Target As Range)
+
+Application.EnableEvents = False
+
+If Target.Row > 23 And Target.Row < 32 And Target.Count = 1 Then
+    If Target.Value = 0 Then
+        
+        rowIteration = Target.Row
+        
+        For i = rowIteration To 32
+        Cells(i, 3) = Cells(i + 1, 3)
+        Cells(i, 6) = Cells(i + 1, 6)
+        rowIteration = rowIteration + 1
+        Next
+        
+        Cells(rowIteration, 3) = ""
+        Cells(rowIteration, 6) = ""
+        
+    End If
+End If
+
+Application.EnableEvents = True
+
+End Sub
+

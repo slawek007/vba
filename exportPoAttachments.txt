@@ -1,0 +1,79 @@
+
+Sub ExportEmailsfromSpecificSender()
+
+On Error GoTo ErrHandler
+    
+    Dim objAtt As Outlook.Attachment
+    
+    ' Set Outlook application object.
+    Dim objOutlook As Object
+    Set objOutlook = CreateObject("Outlook.Application")
+    
+    Dim objNSpace As Outlook.Namespace     ' Create and Set a NameSpace OBJECT.
+    ' The GetNameSpace() method will represent a specified Namespace.
+    Set objNSpace = objOutlook.GetNamespace("MAPI")
+    
+    Dim myFolder As Outlook.Items  ' Create a folder object.
+    Set myFolder = objNSpace.GetDefaultFolder(olFolderInbox).Items
+    
+    Dim DateStartFilter As String
+    'DateStartFilter = CStr(AttDay & "/" & AttMonth & "/20" & AttYear)
+    DateStartFilter = CStr(Replace(ThisWorkbook.Sheets("Purchase Order").Cells(1, 12).Value, ".", "/"))
+    
+    Dim myItems As Outlook.Items
+    Set myItems = myFolder.Restrict("[SentOn] > '#" & DateStartFilter & "#'").Restrict("@SQL=""urn:schemas:httpmail:subject"" like 'zamówienie nr PPL/%'").Restrict("[SenderEmailAddress] = 'gregory@pareo-polska.com'")
+    
+    Dim objItem As Object
+
+    ' Loop through each item in the folder.
+    For Each objItem In myItems
+        If objItem.Class = olMail Then
+        
+            Dim objMail As Outlook.MailItem
+            Set objMail = objItem
+            
+                For Each objAtt In objMail.Attachments
+
+                 If Right(objAtt.fileName, 3) = "pdf" Or Right(objAtt.fileName, 3) = "PDF" Then
+                 
+                 AttYear = Mid(CStr(year(objMail.SentOn)), 3, 2)
+                 AttMonth = Format(CStr(month(objMail.SentOn)), "00")
+                 
+                   
+                   If Mid(objAtt.fileName, 1, 18) = "Purchase Order PPL" Then
+                    
+                    AttYear = Mid(objAtt.fileName, 27, 2)
+                    AttMonth = Mid(objAtt.fileName, 24, 2)
+                    ThisWorkbook.Sheets("Purchase Order").Cells(1, 12).Value = DateStartFilter
+                    'Debug.Print objAtt.fileName'
+                    
+                        If (PoFunctions.checkYearMonthDirectory(CStr(AttYear), CStr(AttMonth))) Then
+                        AttFileFullDirectory = filesLocations.getPoLocation() & "20" & AttYear & "\" & Format(AttMonth, "00") & ") " & MonthName(AttMonth) & "\" & objAtt.fileName
+                        objAtt.SaveAsFile AttFileFullDirectory
+                        End If
+                     
+                   Else
+                   
+                        If (PoFunctions.checkYearMonthDirectory(CStr(AttYear), CStr(AttMonth))) Then
+                        AttFileFullDirectory = filesLocations.getPoLocation() & "20" & AttYear & "\" & Format(AttMonth, "00") & ") " & MonthName(AttMonth) & "\" & objAtt.fileName
+                        objAtt.SaveAsFile AttFileFullDirectory
+                        End If
+                   
+                   End If
+                   
+                 End If
+
+                Next objAtt
+            
+        End If
+
+    Next
+    ThisWorkbook.Sheets("Purchase Order").Cells(1, 12).Value = Date
+    Set objMail = Nothing
+
+ErrHandler:
+    Debug.Print Err.Description
+End Sub
+    
+
+

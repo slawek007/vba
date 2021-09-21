@@ -1,0 +1,9 @@
+Public Function RemoveWhiteSpace(Target As String) As String
+    With New RegExp
+        .Pattern = "\s"
+        .MultiLine = True
+        .Global = True
+        RemoveWhiteSpace = .Replace(Target, vbNullString)
+    End With
+End Function
+

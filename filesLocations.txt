@@ -1,0 +1,8 @@
+
+Function getPoLocation()
+getPoLocation = "D:\wlasciwy.adres"
+End Function
+
+Function getWzLocation()
+getWzLocation = "D:\wlasciwy.adres\"
+End Function
